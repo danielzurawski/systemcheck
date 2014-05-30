@@ -1,0 +1,25 @@
+{
+  "name": "systemcheck",
+  "version": "0.0.0",
+  "description": "Health check scheduling library for monitoring state of other systems",
+  "main": "systemcheck.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielzurawski/systemcheck.git"
+  },
+  "keywords": [
+    "system",
+    "healthcheck"
+  ],
+  "author": "Daniel Zurawski",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/danielzurawski/systemcheck/issues"
+  },
+  "dependencies": {
+    "lodash": "~2.4.1"
+  }
+}
