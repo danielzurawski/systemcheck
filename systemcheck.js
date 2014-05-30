@@ -12,7 +12,8 @@ _.extend(SystemCheck.prototype, {
     monitorSystem: monitorSystem,
     getSystems: getSystems,
     setSystemState: setSystemState,
-    passError: passError
+    passError: passError,
+    addLogger: addLogger
 });
 
 function status(system, statusCode) {
@@ -78,6 +79,10 @@ function setSystemState(system, status, error) {
     }
 }
 
+function addLogger(logger) {
+    this.logger = logger;
+}
+
 function passError(system, cb) {
     var self = this;
     return function(err) {
@@ -103,6 +108,4 @@ function createRingBuffer(length){
 };
 
 // Optional logger
-module.exports = function(logger) {
-    return new SystemCheck(logger);
-};
+module.exports = new SystemCheck();
