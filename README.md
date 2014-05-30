@@ -7,6 +7,20 @@ Node.js health check scheduling library for monitoring state of other systems th
 
 It allows for scheduling heartbeats or setting an explicit state of any component without our application and automatically mantains state of each system for which a healthcheck has been defined.
 
+In short, it allows you to maintain this:
+
+
+elasticsearch: {
+  status: 0,
+  date: "2014-05-30T14:36:58.744Z",
+  lastErrors: [ ]
+},
+mysql: {
+  status: 0,
+  date: "2014-05-30T14:36:58.944Z",
+  lastErrors: [ ]
+}
+
 Examples (not executable):
 ------
 1. elasticsearch.js - wrapper around ElasticSearch client library that sets up a healthcheck for the system and updates the state of the system on success
