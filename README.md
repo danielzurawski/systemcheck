@@ -10,7 +10,7 @@ It allows for scheduling heartbeats or setting an explicit state of any componen
 In short, it allows you to maintain this:
 
 
-elasticsearch: {
+```elasticsearch: {
   status: 0,
   date: "2014-05-30T14:36:58.744Z",
   lastErrors: [ ]
@@ -19,7 +19,7 @@ mysql: {
   status: 0,
   date: "2014-05-30T14:36:58.944Z",
   lastErrors: [ ]
-}
+}```
 
 Examples (not executable):
 ------
