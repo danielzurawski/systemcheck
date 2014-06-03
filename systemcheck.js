@@ -87,7 +87,7 @@ function passError(system, cb) {
     var self = this;
     return function(err) {
         if (err) {
-            if (this.logger) this.logger.error(system, 'SystemCheck error', err.stack);
+            if (self.logger) self.logger.error(system, 'SystemCheck error', err.stack);
             self.setSystemState(system, 1, err.stack);
         }
         if (cb) cb(err);
