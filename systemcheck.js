@@ -41,7 +41,10 @@ function monitorSystem(system, time, fn) {
 
 function updateSystemState(self, system) {
     return function(err, result) {
-        if (err) self.systems[system].errorsBuffer.push(String(err));
+        if (err) {
+            self.systems[system].errorsBuffer.push(String(err));
+            if (self.logger) self.logger.error(system, 'SystemCheck error', err.stack);
+        }
         self.systems[system].status = self.status(system, (err ? 1 : 0));
     }
 }
