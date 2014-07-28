@@ -57,7 +57,7 @@ function getSystems() {
 function overallStatus() {
     var overallStatus = {};
     var status = 0;
-    _.forEach(Objects.keys(this.systems), function(system) {
+    _.forEach(Object.keys(this.systems), function(system) {
         overallStatus[system] = this.systems[system].status;
         status += this.systems[system].status.status;
     }, this);
