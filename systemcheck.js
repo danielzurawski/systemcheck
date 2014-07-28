@@ -12,6 +12,7 @@ _.extend(SystemCheck.prototype, {
     monitorSystem: monitorSystem,
     getSystems: getSystems,
     setSystemState: setSystemState,
+    overallStatus: overallStatus,
     passError: passError,
     addLogger: addLogger
 });
@@ -30,7 +31,7 @@ function monitorSystem(system, time, fn) {
 
     var self = this;
     function execute() {
-        fn(updateSystemState(self, system)) 
+        fn(updateSystemState(self, system));
     }
     execute();
     var systemInterval = setInterval(execute, time);
@@ -53,11 +54,22 @@ function getSystems() {
     return this.systems;
 }
 
+function overallStatus() {
+    var overallStatus = {};
+    var status = 0;
+    _.forEach(Objects.keys(this.systems), function(system) {
+        overallStatus[system] = this.systems[system].status;
+        status += this.systems[system].status.status;
+    }, this);
+    overallStatus.status = status;
+    return overallStatus;
+}
+
 function setSystemState(system, status, error) {
     if (! this.systems[system]) {
         if (this.logger) this.logger.warn('Tried setting system: ', system, ', state to: ', 1, '. System doesnt exist.');
-        return;  
-    } 
+        return;
+    }
 
     clearInterval(this.systems[system].interval);
     clearTimeout(this.systems[system].delay);
@@ -76,7 +88,7 @@ function setSystemState(system, status, error) {
     function resumeHealthcheck() {
         var newInterval = setInterval(function() {
             self.systems[system].intervalFunction(updateSystemState(self, system))
-        }, self.systems[system].time);  
+        }, self.systems[system].time);
 
         self.systems[system].interval = newInterval;
     }
@@ -99,7 +111,7 @@ function passError(system, cb) {
 }
 
 function createRingBuffer(length){
-    var pointer = 0, buffer = []; 
+    var pointer = 0, buffer = [];
 
     return {
         getBuffer: function(){ return buffer; },
@@ -108,7 +120,7 @@ function createRingBuffer(length){
             pointer = (pointer +1 ) % length;
         }
     };
-};
+}
 
 // Optional logger
 module.exports = new SystemCheck();
