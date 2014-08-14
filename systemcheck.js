@@ -11,23 +11,25 @@ _.extend(SystemCheck.prototype, {
     status: status,
     monitorSystem: monitorSystem,
     getSystems: getSystems,
-    setSystemState: setSystemState,
     overallStatus: overallStatus,
     passError: passError,
     addLogger: addLogger
 });
 
 function status(system, statusCode) {
-    return { status: statusCode, date: new Date(), lastErrors: this.systems[system].errorsBuffer.getBuffer() }
+    return { status: statusCode, date: new Date(), lastErrors: this.systems[system].errorsBuffer.getBuffer() };
 }
 
-function monitorSystem(system, time, fn) {
+function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize) {
     if (this.systems[system]) return;
+
     this.systems[system] = {};
-    this.systems[system].restartInterval = 0;
-    this.systems[system].errorsBuffer = createRingBuffer(3);
+    this.systems[system].errorsBuffer = createRingBuffer(errorBufferSize || 5);
+    this.systems[system]._errorBufferSize = errorBufferSize;
+    this.systems[system].errorThresholdMinutes = errorThresholdMinutes || 5;
     this.systems[system].intervalFunction = fn;
     this.systems[system].time = time;
+    this.systems[system].status = status.call(this, system, 0)
 
     var self = this;
     function execute() {
@@ -38,16 +40,6 @@ function monitorSystem(system, time, fn) {
 
     this.systems[system].interval = systemInterval;
     if (this.logger) this.logger.debug('SystemCheck started monitoring', system, 'at an interval of', time);
-}
-
-function updateSystemState(self, system) {
-    return function(err, result) {
-        if (err) {
-            self.systems[system].errorsBuffer.push(String(err));
-            if (self.logger) self.logger.error(system, 'SystemCheck error', err.stack);
-        }
-        self.systems[system].status = self.status(system, (err ? 1 : 0));
-    }
 }
 
 function getSystems() {
@@ -65,62 +57,67 @@ function overallStatus() {
     return overallStatus;
 }
 
-function setSystemState(system, status, error) {
-    if (! this.systems[system]) {
-        if (this.logger) this.logger.warn('Tried setting system: ', system, ', state to: ', 1, '. System doesnt exist.');
-        return;
-    }
-
-    clearInterval(this.systems[system].interval);
-    clearTimeout(this.systems[system].delay);
-
-    this.systems[system].status = this.status(system, status);
-
-    // On every explicit error notification, increase the restartInterval by 5 minutes
-    // this is to avoid the interval simple test overriding the real status code of a system
-    this.systems[system].restartInterval = 300000 + this.systems[system].restartInterval;
-    if (error) this.systems[system].errorsBuffer.push(String(error));
-
-    var delay = setTimeout(resumeHealthcheck, this.systems[system].restartInterval);
-    this.systems[system].delay = delay;
-
-    var self = this;
-    function resumeHealthcheck() {
-        var newInterval = setInterval(function() {
-            self.systems[system].intervalFunction(updateSystemState(self, system))
-        }, self.systems[system].time);
-
-        self.systems[system].interval = newInterval;
-    }
-}
-
 function addLogger(logger) {
     this.logger = logger;
+}
+
+function updateSystemState(self, system) {
+    return function(err, result) {
+        var component = self.systems[system];
+        
+        if (err) {
+            if (self.logger) self.logger.error('systemcheck [', system, ']:', err.stack);
+            var error = {
+                exception: String(err),
+                date: new Date()
+            };
+            component.errorsBuffer.push(error);
+        }
+
+        updateStatus.call(self, component, system);
+    };
+}
+
+function updateStatus(component, system) {
+    var recentErrorCount = 0;
+    var errors = component.errorsBuffer.getBuffer();
+    var date = new Date();
+
+    _.forEach(errors, function(error) {
+        var earlier = date.setMinutes(date.getMinutes() - 5);
+        if (error.date >= earlier) recentErrorCount++;
+    });
+
+    if (recentErrorCount >= component._errorBufferSize)
+        component.status = this.status(system, 1);
+}
+
+function refreshAllComponentStatus() {
+    var systems = this.getSystems();
+    _.forEach(Object.keys(systems), function(system) {
+        updateStatus(systems[system], system);
+    });
 }
 
 function passError(system, cb) {
     var self = this;
     return function(err) {
-        if (err) {
-            if (self.logger) self.logger.error(system, 'SystemCheck error', err.stack);
-            self.setSystemState(system, 1, err.stack);
-        }
+        updateSystemState(self, system)(err);
         if (cb) cb(err);
         else throw err;
-    }
+    };
 }
 
-function createRingBuffer(length){
+function createRingBuffer(length) {
     var pointer = 0, buffer = [];
 
     return {
-        getBuffer: function(){ return buffer; },
-        push: function(item){
+        getBuffer: function() { return buffer; },
+        push: function(item) {
             buffer[pointer] = item;
-            pointer = (pointer +1 ) % length;
+            pointer = (pointer + 1) % length;
         }
     };
 }
 
-// Optional logger
 module.exports = new SystemCheck();
