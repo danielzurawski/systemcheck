@@ -38,4 +38,10 @@ describe('systemcheck tests', function() {
         var systems = SystemCheck.getSystems()
         assert.equal(systems['nyan'].status.status, 1);
     });
+
+    it('should correctly return overall status', function() {
+        var status = SystemCheck.overallStatus();
+        assert.equal(status['test'].status, 0);
+        assert.equal(status['nyan'].status, 1);
+    });
 });
