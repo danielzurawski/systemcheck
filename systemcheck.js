@@ -47,6 +47,7 @@ function getSystems() {
 }
 
 function overallStatus() {
+    refreshAllComponentStatus.call(this);
     var overallStatus = {};
     var status = 0;
     _.forEach(Object.keys(this.systems), function(system) {
@@ -64,7 +65,7 @@ function addLogger(logger) {
 function updateSystemState(self, system) {
     return function(err, result) {
         var component = self.systems[system];
-        
+
         if (err) {
             if (self.logger) self.logger.error('systemcheck [', system, ']:', err.stack);
             var error = {
@@ -81,21 +82,24 @@ function updateSystemState(self, system) {
 function updateStatus(component, system) {
     var recentErrorCount = 0;
     var errors = component.errorsBuffer.getBuffer();
-    var date = new Date();
 
     _.forEach(errors, function(error) {
-        var earlier = date.setMinutes(date.getMinutes() - 5);
+        var date = new Date();
+        var earlier = date.setMinutes(date.getMinutes() - component.errorThresholdMinutes);
         if (error.date >= earlier) recentErrorCount++;
     });
 
     if (recentErrorCount >= component._errorBufferSize)
         component.status = this.status(system, 1);
+    else component.status = this.status(system, 0);
 }
 
 function refreshAllComponentStatus() {
     var systems = this.getSystems();
+
+    var that = this;
     _.forEach(Object.keys(systems), function(system) {
-        updateStatus(systems[system], system);
+        updateStatus.call(that, systems[system], system);
     });
 }
 
