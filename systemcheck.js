@@ -54,7 +54,7 @@ function overallStatus() {
         overallStatus[system] = this.systems[system].status;
         status += this.systems[system].status.status;
     }, this);
-    overallStatus.status = status;
+    overallStatus.overallStatus = status;
     return overallStatus;
 }
 
