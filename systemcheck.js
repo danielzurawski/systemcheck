@@ -17,7 +17,7 @@ _.extend(SystemCheck.prototype, {
 });
 
 function status(system, statusCode) {
-    return { status: statusCode, date: new Date(), lastErrors: this.systems[system].errorsBuffer.getBuffer() };
+    return { status: statusCode, lastErrors: this.systems[system].errorsBuffer.getBuffer(), starting: this.systems[system].starting };
 }
 
 function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize) {
@@ -29,7 +29,8 @@ function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize)
     this.systems[system].errorThresholdMinutes = errorThresholdMinutes || 5;
     this.systems[system].intervalFunction = fn;
     this.systems[system].time = time;
-    this.systems[system].status = status.call(this, system, 0)
+    this.systems[system].status = status.call(this, system, -1)
+    this.systems[system].starting = true;
 
     var self = this;
     function execute() {
@@ -50,13 +51,17 @@ function overallStatus() {
     refreshAllComponentStatus.call(this);
     var overallStatus = {};
     var status = 0;
+    var starting = false;
     _.forEach(Object.keys(this.systems), function(system) {
         overallStatus[system] = this.systems[system].status;
         status += this.systems[system].status.status;
+        if (this.systems[system].status.starting)  starting=true;
     }, this);
     overallStatus.overallStatus = status;
+    overallStatus.anyStarting = starting;
     return overallStatus;
 }
+
 
 function addLogger(logger) {
     this.logger = logger;
@@ -74,6 +79,8 @@ function updateSystemState(self, system) {
             };
             component.errorsBuffer.push(error);
         }
+
+        self.systems[system].starting = false;
 
         updateStatus.call(self, component, system);
     };
