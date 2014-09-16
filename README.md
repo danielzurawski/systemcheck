@@ -1,28 +1,26 @@
 systemcheck
 ===========
 
-Node.js health check scheduling library for monitoring state of other systems that our app depends on.
+Node.js health check scheduling library for monitoring state of application components (e.g. Redis, ElasticSearch).
 
-*This library is only useful if you run your app as a single process that is maintained by a master restarter deamon (Solaris SMF, daemontools (http://cr.yp.to/daemontools/svc.html)) or some other process that can keep it alive and not as a clustered, multi-process application.*
+*This useful does not synchronise app health state between multiple processes if you happen to run it via node cluster or recluster. Unless you really have a reason to run it with cluster, you can run it with any daemon (Solaris SMF, daemontools (http://cr.yp.to/daemontools/svc.html)) or some other process that can keep it alive.*
 
-It allows for scheduling heartbeats or setting an explicit state of any component without our application and automatically mantains state of each system for which a healthcheck has been defined.
+It allows for scheduling heartbeats or setting an explicit state of any component within a single process.
 
 In short, it allows you to maintain this:
 
 
 ```elasticsearch: {
   status: 0,
-  date: "2014-05-30T14:36:58.744Z",
   lastErrors: [ ]
 },
 mysql: {
-  status: 0,
-  date: "2014-05-30T14:36:58.944Z",
-  lastErrors: [ ]
+  status: 1,
+  lastErrors: [ "Error: Connection lost: The server closed the connection." ]
 }```
 
-Examples (not executable):
+Examples folder contains the following examples: (not executable)
 ------
 1. elasticsearch.js - wrapper around ElasticSearch client library that sets up a healthcheck for the system and updates the state of the system on success
 2. healthcheck.js - example of accessing the SystemCheck systems states object
-3. Example of explicitly putting 
+3. Example of explicitly passing error to modify the component state.
