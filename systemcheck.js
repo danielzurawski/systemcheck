@@ -20,7 +20,7 @@ function status(system, statusCode) {
     return { status: statusCode, lastErrors: this.systems[system].errorsBuffer.getBuffer(), starting: this.systems[system].starting };
 }
 
-function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize) {
+function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize, errorCb) {
     var self = this;
 
     if (this.systems[system]) {
@@ -36,13 +36,16 @@ function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize)
     this.systems[system].status = status.call(this, system, -1);
     this.systems[system].starting = true;
 
-    function execute() {
-        self.systems[system].intervalFunction(updateSystemState(self, system));
-    }
-    execute();
+    if (errorCb) fn(errorCb);
+    else execute();
+
     this.systems[system].interval = setInterval(execute, time);
 
     if (this.logger) this.logger.debug('SystemCheck started monitoring', system, 'at an interval of', time);
+
+    function execute() {
+        self.systems[system].intervalFunction(updateSystemState(self, system));
+    }
 }
 
 function getSystems() {
