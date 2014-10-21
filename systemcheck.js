@@ -29,7 +29,7 @@ function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize,
 
     this.systems[system] = {};
     this.systems[system].errorsBuffer = createRingBuffer(errorBufferSize || 5);
-    this.systems[system]._errorBufferSize = errorBufferSize;
+    this.systems[system]._errorBufferSize = (errorBufferSize || 5);
     this.systems[system].errorThresholdMinutes = errorThresholdMinutes || 5;
     this.systems[system].intervalFunction = fn;
     this.systems[system].time = time;

@@ -1,6 +1,6 @@
 {
   "name": "systemcheck",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Health check scheduling library for monitoring state of other systems",
   "main": "systemcheck.js",
   "scripts": {
