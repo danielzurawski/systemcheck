@@ -17,25 +17,18 @@ _.extend(SystemCheck.prototype, {
 });
 
 function status(system, statusCode) {
-    return { status: statusCode, lastErrors: this.systems[system].errorsBuffer.getBuffer(), starting: this.systems[system].starting };
+    return { status: statusCode, lastErrors: this.errorsBuffer.getBuffer(), starting: this.starting };
 }
 
 function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize, errorCb) {
     var self = this;
 
-    if (this.systems[system]) {
+    if (this.systems[system]) { // if static system is overriden clear interval
         this.systems[system].interval && clearInterval(this.systems[system].interval);
     }
 
-    this.systems[system] = {};
-    this.systems[system].errorsBuffer = createRingBuffer(errorBufferSize || 5);
-    this.systems[system]._errorBufferSize = (errorBufferSize || 5);
-    this.systems[system].errorThresholdMinutes = errorThresholdMinutes || 5;
-    this.systems[system].intervalFunction = fn;
-    this.systems[system].time = time;
-    this.systems[system].status = status.call(this, system, -1);
-    this.systems[system].starting = true;
-
+    this.systems[system] = new HeartbeatSystem(system, time, fn, errorThresholdMinutes, errorBufferSize, errorCb);
+    
     if (errorCb) fn(errorCb);
     else execute();
 
@@ -60,7 +53,7 @@ function overallStatus() {
     _.forEach(Object.keys(this.systems), function(system) {
         overallStatus[system] = this.systems[system].status;
         status += this.systems[system].status.status;
-        if (this.systems[system].status.starting)  starting=true;
+        if (this.systems[system].status.starting) starting=true;
     }, this);
     overallStatus.overallStatus = status;
     overallStatus.anyStarting = starting;
@@ -72,10 +65,25 @@ function addLogger(logger) {
     this.logger = logger;
 }
 
-function updateSystemState(self, system) {
+function isSystemRegistered() {
+
+}
+
+function updateSystemState(system) {
+    var self = this;
     return function(err, result) {
         var component = self.systems[system];
 
+        if (! component) {
+            var componentMissingError = 'Heartbeat on [ ' + system + ' ] not registered (monitorSystem never callled). Creating a new (non-heartbeat) system.';
+            if (self.logger)
+                self.logger.error(componentMissingError) 
+            else console.log(componentMissingError));
+
+            self.systems[system] = new System(system);
+            component = self.system[system];
+        }
+        
         if (err) {
             if (self.logger) self.logger.error('systemcheck [', system, ']:', err.stack);
             var error = {
@@ -85,25 +93,24 @@ function updateSystemState(self, system) {
             component.errorsBuffer.push(error);
         }
 
-        self.systems[system].starting = false;
+        component.starting = false;
 
-        updateStatus.call(self, component, system);
+        updateStatus.call(component, system);
     };
 }
 
-function updateStatus(component, system) {
+function updateStatus() {
+    var self = this;
     var recentErrorCount = 0;
-    var errors = component.errorsBuffer.getBuffer();
+    var errors = self.errorsBuffer.getBuffer();
 
     _.forEach(errors, function(error) {
         var date = new Date();
-        var earlier = date.setMinutes(date.getMinutes() - component.errorThresholdMinutes);
+        var earlier = date.setMinutes(date.getMinutes() - self.errorThresholdMinutes);
         if (error.date >= earlier) recentErrorCount++;
     });
 
-    if (recentErrorCount >= component._errorBufferSize)
-        component.status = this.status(system, 1);
-    else component.status = this.status(system, 0);
+    self.status = status.call(self, recentErrorCount >= self._errorBufferSiz ? 1 : 0);
 }
 
 function refreshAllComponentStatus() {
@@ -135,5 +142,23 @@ function createRingBuffer(length) {
         }
     };
 }
+
+function System(name, errorThresholdMinutes, errorBufferSize, errorCb) {
+    this.errorsBuffer = createRingBuffer(errorBufferSize || 5);
+    this._errorBufferSize = (errorBufferSize || 5);
+    this.errorThresholdMinutes = errorThresholdMinutes || 5;
+    this.starting = true;
+    this.status = status.call(this, -1);
+}
+function HeartbeatSystem(name, time, fn, errorThresholdMinutes, errorBufferSize, errorCb) {
+     System.call(system, errorThresholdMinutes, errorBufferSize, errorCb);
+     
+     this.intervalFunction = fn;
+     this.time = time;
+
+}
+
+HeartbeatSystem.prototype = Object.create(System.prototype);
+HeartbeatSystem.prototype.constructor = HeartbeatSystem;
 
 module.exports = new SystemCheck();
