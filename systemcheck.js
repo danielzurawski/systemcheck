@@ -78,12 +78,12 @@ function updateSystemState(self, system) {
 
         if (err) {
             if (! component) {
-                var systemMissingErr = 'Heartbeat on [ ' + system + ' ] not registered (monitorSystem never callled). Not recording issues.';
+                var systemMissingErr = 'Heartbeat on [ ' + system + ' ] not registered (monitorSystem never called). Not recording issues. Err was: '+ err;
                 if (self.logger) {
-                    self.logger.error(componentMissingError)
+                    self.logger.error(systemMissingErr)
                     return self.logger.error(err.stack);
                 } else {
-                    console.log(componentMissingError);
+                    console.log(systemMissingErr);
                     return console.log(err.stack);
                 }
             }
