@@ -44,4 +44,5 @@ describe('systemcheck tests', function() {
         assert.equal(status['test'].status, 0);
         assert.equal(status['nyan'].status, 1);
     });
+
 });

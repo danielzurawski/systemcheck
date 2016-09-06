@@ -1,51 +1,59 @@
 'use strict';
 
-var _ = require('lodash');
-
 function SystemCheck(logger) {
     this.systems = {};
     this.logger = logger;
 }
 
-_.extend(SystemCheck.prototype, {
+SystemCheck.prototype = {
+    constructor: SystemCheck,
     status: status,
     monitorSystem: monitorSystem,
     getSystems: getSystems,
     overallStatus: overallStatus,
     passError: passError,
     addLogger: addLogger
-});
+};
 
 function status(system, statusCode) {
-    return { status: statusCode, lastErrors: this.systems[system].errorsBuffer.getBuffer(), starting: this.systems[system].starting };
+    return {
+        status: statusCode,
+        lastErrors: this.systems[system].errorsBuffer.getBuffer(),
+        starting: this.systems[system].starting
+    };
 }
 
 function monitorSystem(system, time, fn, errorThresholdMinutes, errorBufferSize, errorCb) {
-    var self = this;
 
-    if (this.systems[system]) {
-        this.systems[system].interval && clearInterval(this.systems[system].interval);
+    if (this.systems[system] && this.systems[system].interval) {
+        clearInterval(this.systems[system].interval);
     }
 
-    this.systems[system] = {};
-    this.systems[system].errorsBuffer = createRingBuffer(errorBufferSize || 5);
-    this.systems[system]._errorBufferSize = (errorBufferSize || 5);
-    this.systems[system].errorThresholdMinutes = errorThresholdMinutes || 5;
-    this.systems[system].intervalFunction = fn;
-    this.systems[system].time = time;
-    this.systems[system].status = status.call(this, system, -1);
-    this.systems[system].starting = true;
+    this.systems[system] = {
+        _errorBufferSize: errorBufferSize || 5,
+        errorsBuffer: createRingBuffer(errorBufferSize || 5),
+        errorThresholdMinutes: errorThresholdMinutes || 5,
+        intervalFunction: fn,
+        time: time,
+        starting: true,
+        interval: setInterval(execute, time, this)
+    };
 
+    this.systems[system].status = this.status(system, -1);
+
+    var callback = updateSystemState(this, system);
     if (errorCb) fn(errorCb);
-    else execute();
+    else execute(this);
 
-    this.systems[system].interval = setInterval(execute, time);
+    if (this.logger) this.logger.debug(
+        'SystemCheck started monitoring', system,
+        'at an interval of', time
+    );
 
-    if (this.logger) this.logger.debug('SystemCheck started monitoring', system, 'at an interval of', time);
-
-    function execute() {
-        self.systems[system].intervalFunction(updateSystemState(self, system));
+    function execute(self) {
+        self.systems[system].intervalFunction(callback);
     }
+
 }
 
 function getSystems() {
@@ -57,10 +65,10 @@ function overallStatus() {
     var overallStatus = {};
     var status = 0;
     var starting = false;
-    _.forEach(Object.keys(this.systems), function(system) {
+    Object.keys(this.systems).forEach(function(system) {
         overallStatus[system] = this.systems[system].status;
         status += this.systems[system].status.status;
-        if (this.systems[system].status.starting)  starting=true;
+        if (this.systems[system].status.starting) starting=true;
     }, this);
     overallStatus.overallStatus = status;
     overallStatus.anyStarting = starting;
@@ -78,7 +86,10 @@ function updateSystemState(self, system) {
 
         if (err) {
             if (! component) {
-                var systemMissingErr = 'Heartbeat on [ ' + system + ' ] not registered (monitorSystem never called). Not recording issues. Err was: '+ err;
+                var systemMissingErr =
+                    'Heartbeat on [ ' + system + ' ] not registered ' +
+                    '(monitorSystem never called). ' +
+                    'Not recording issues. Err was: ' + err;
                 if (self.logger) {
                     self.logger.error(systemMissingErr)
                     return self.logger.error(err.stack);
@@ -109,7 +120,7 @@ function updateStatus(component, system) {
     var recentErrorCount = 0;
     var errors = component.errorsBuffer.getBuffer();
 
-    _.forEach(errors, function(error) {
+    errors.forEach(function(error) {
         var date = new Date();
         var earlier = date.setMinutes(date.getMinutes() - component.errorThresholdMinutes);
         if (error.date >= earlier) recentErrorCount++;
@@ -121,12 +132,9 @@ function updateStatus(component, system) {
 }
 
 function refreshAllComponentStatus() {
-    var systems = this.getSystems();
-
-    var that = this;
-    _.forEach(Object.keys(systems), function(system) {
-        updateStatus.call(that, systems[system], system);
-    });
+    Object.keys(this.systems).forEach(function(system) {
+        updateStatus.call(this, this.systems[system], system);
+    }, this);
 }
 
 function passError(system, cb) {
