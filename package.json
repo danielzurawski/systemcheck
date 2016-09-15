@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/danielzurawski/systemcheck/issues"
   },
-  "dependencies": {
-    "lodash": "~2.4.1"
+  "devDependencies": {
+    "mocha": "^3.0.2"
   }
 }
